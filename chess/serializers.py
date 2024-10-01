@@ -8,7 +8,22 @@ from .models import GameInvitation
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'username', 'email']
+        fields = ['id', 'username', 'email', 'password']
+
+    def create(self, validated_data):
+        # Remove the password from the validated data
+        password = validated_data.pop('password')
+        # Create the user without the password first
+        user = User(**validated_data)
+        # Set the user's password (which will be hashed)
+        user.set_password(password)
+        # Save the user instance
+        user.save()
+        return user
+
+class LoginSerializer(serializers.Serializer):
+    username = serializers.CharField()
+    password = serializers.CharField(write_only=True)
 
 class CampusSerializer(serializers.ModelSerializer):
     class Meta:
@@ -18,6 +33,7 @@ class CampusSerializer(serializers.ModelSerializer):
 class PlayerSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
     campus = CampusSerializer(read_only=True)
+    chess_com_username = serializers.CharField(source='user.username', read_only=True)
 
     class Meta:
         model = Player

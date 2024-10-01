@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-gw^y=_v541_+r%zvdk8_b9_8d@*d%#k2s^dd=s8^8$)k1ut_o6
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['chessback-1.onrender.com', '127.0.0.1', 'localhost']
 
 
 # Application definition
@@ -37,11 +37,11 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'rest_framework',
     'chess',
     'forum',
     'notifications',
-
+    'rest_framework',
+    'rest_framework.authtoken',
 
 ]
 
@@ -127,3 +127,15 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+}
+
+# CHESS_COM_API_BASE = 'https://api.chess.com'

@@ -3,13 +3,15 @@
 from django.urls import path
 from . import views
 from .views import PlayerStatsView
-from .views import TournamentBracketView, TournamentProgressView
+from .views import TournamentBracketView, TournamentProgressView,SignupView,LoginView
 
 
 urlpatterns = [
-     path('', views.chess_home, name='chess_home'),
+    path('', views.chess_home, name='chess_home'),
+    path('signup', SignupView.as_view(), name='signup'),
+    path('login', LoginView.as_view(), name='login'),
     path('player/<str:chess_com_username>/', views.PlayerDetailView.as_view(), name='player_profile'),
-    path('player/<str:username>/archives/', views.player_game_archives, name='player_game_archives'),
+    # path('player/<str:username>/archives/', views.player_game_archives, name='player_game_archives'),
     path('player/<str:chess_com_username>/campus/', views.PlayerCampusView.as_view(), name='player_campus'),
     path('tournament/create/', views.CreateTournamentView.as_view(), name='create_tournament'),
     path('tournament/submit-result/', views.SubmitTournamentResultView.as_view(), name='submit_tournament_result'),

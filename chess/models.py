@@ -8,6 +8,9 @@ class Campus(models.Model):
     name = models.CharField(max_length=100)
     location = models.CharField(max_length=100)
 
+    def __str__(self):
+        return f"{self.name}"
+
 class Player(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     chess_com_username = models.CharField(max_length=100)

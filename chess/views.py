@@ -1,7 +1,7 @@
 from django.shortcuts import render
 
 # chess/views.py
-
+from django.contrib.auth import authenticate
 import requests
 from django.conf import settings
 from django.shortcuts import get_object_or_404
@@ -10,7 +10,7 @@ from rest_framework.response import Response
 from rest_framework import generics, status
 from .models import Player, Tournament, TournamentResult, Campus
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
-from .serializers import (
+from .serializers import (UserSerializer,LoginSerializer,
     PlayerSerializer, PlayerCreateUpdateSerializer,
     TournamentSerializer, TournamentCreateSerializer,
     TournamentResultSerializer, TournamentResultCreateSerializer,
@@ -21,26 +21,84 @@ from .models import Tournament, Match
 from rest_framework.views import APIView
 from .models import PlayerStats
 from django.contrib.auth.models import User
+from rest_framework.authtoken.models import Token
+from rest_framework.permissions import AllowAny
+
+class SignupView(APIView):
+    # Allow anyone to access this view (no authentication needed)
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        # Deserialize incoming data using UserSerializer
+        serializer = UserSerializer(data=request.data)
+        # Validate the data
+        if serializer.is_valid():
+            # Save the new user (this will call the overridden create method)
+            user = serializer.save()
+            # Generate a token for the newly created user
+            token = Token.objects.create(user=user)
+            # Return the user's data along with the authentication token
+            return Response({
+                'user': UserSerializer(user).data,
+                'token': token.key
+            }, status=status.HTTP_201_CREATED)
+        # If validation fails, return the errors
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class LoginView(APIView):
+    # Allow anyone to access this view (no authentication needed)
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        # Deserialize the login data
+        serializer = LoginSerializer(data=request.data)
+        if serializer.is_valid():
+            # Authenticate the user using the provided credentials
+            user = authenticate(
+                username=serializer.validated_data['username'],
+                password=serializer.validated_data['password']
+            )
+            # If authentication is successful
+            if user is not None:
+                # Get or create an authentication token for the user
+                token, created = Token.objects.get_or_create(user=user)
+                # Return the user data and the token
+                return Response({
+                    'user': UserSerializer(user).data,
+                    'token': token.key
+                }, status=status.HTTP_200_OK)
+            # If authentication fails, return an error
+            return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+        # If validation fails, return the errors
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class PlayerDetailView(generics.RetrieveAPIView):
     queryset = Player.objects.all()
     serializer_class = PlayerSerializer
     lookup_field = 'chess_com_username'
+    permission_classes = [IsAuthenticated]
 
     def retrieve(self, request, *args, **kwargs):
-        instance = self.get_object()
-        serializer = self.get_serializer(instance)
-        # Here you would add the logic to fetch Chess.com data
-        chess_com_data = get_chess_com_data(f"player/{instance.chess_com_username}")
-        return Response({**serializer.data, **chess_com_data})
+        instance = self.get_object()  # Retrieve the Player instance
+        
+        # Fetch data from Chess.com
+        chess_com_data = self.get_chess_com_data(instance.chess_com_username)
 
-@api_view(['GET'])
-def player_game_archives(request, username):
-    archives = get_chess_com_data(f"player/{username}/games/archives")
-    return Response(archives)
+        # Use get_or_create to ensure the player exists in the database
+        player, created = Player.objects.get_or_create(
+            chess_com_username=instance.chess_com_username
+        )
+
+        # Serialize the player instance
+        serializer = self.get_serializer(player)
+        return Response(serializer.data)
+
+# @api_view(['GET'])
+# def player_game_archives(request, username):
+#     archives = get_chess_com_data(f"player/{username}/games/archives")
+#     return Response(archives)
 
 class PlayerCampusView(generics.RetrieveAPIView):
     queryset = Player.objects.all()
@@ -73,29 +131,29 @@ class LeaderboardView(generics.ListAPIView):
         return super().get_queryset()[:10]  # Top 10 players
 
 
-def get_chess_com_data(endpoint):
-    response = requests.get(f"{settings.CHESS_COM_API_BASE}/{endpoint}")
-    return response.json()
+# def get_chess_com_data(endpoint):
+#     response = requests.get(f"{settings.CHESS_COM_API_BASE}/{endpoint}")
+#     return response.json()
 
-@api_view(['GET'])
-def player_profile(request, username):
-    profile = get_chess_com_data(f"player/{username}")
-    stats = get_chess_com_data(f"player/{username}/stats")
+# @api_view(['GET'])
+# def player_profile(request, username):
+#     profile = get_chess_com_data(f"player/{username}")
+#     stats = get_chess_com_data(f"player/{username}/stats")
     
-    player = get_object_or_404(Player, chess_com_username=username)
-    campus = player.campus.name if player.campus else None
+#     player = get_object_or_404(Player, chess_com_username=username)
+#     campus = player.campus.name if player.campus else None
     
-    return Response({
-        "profile": profile,
-        "stats": stats,
-        "local_rating": player.local_rating,
-        "campus": campus
-    })
+#     return Response({
+#         "profile": profile,
+#         "stats": stats,
+#         "local_rating": player.local_rating,
+#         "campus": campus
+#     })
 
-@api_view(['GET'])
-def player_game_archives(request, username):
-    archives = get_chess_com_data(f"player/{username}/games/archives")
-    return Response(archives)
+# @api_view(['GET'])
+# def player_game_archives(request, username):
+#     archives = get_chess_com_data(f"player/{username}/games/archives")
+#     return Response(archives)
 
 @api_view(['GET'])
 def player_campus(request, username):
