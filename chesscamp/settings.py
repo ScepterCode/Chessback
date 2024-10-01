@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-gw^y=_v541_+r%zvdk8_b9_8d@*d%#k2s^dd=s8^8$)k1ut_o6
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['chessback-1.onrender.com', '127.0.0.1', 'localhost']
+ALLOWED_HOSTS = ['chessback-1.onrender.com', 'localhost', '127.0.0.1']
 
 
 # Application definition
